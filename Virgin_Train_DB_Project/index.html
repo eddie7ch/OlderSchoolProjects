@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virgin Train DB Explorer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --border: #2a2a2a;
+      --text: #e5e5e5;
+      --muted: #666;
+      --accent: #e10a0a;
+      --accent-light: #ff3b3b33;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+    .container { max-width: 900px; margin: 0 auto; }
+    header { margin-bottom: 2rem; }
+    .logo { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+    .logo-icon { font-size: 1.8rem; }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+    .subtitle { font-size: 0.82rem; color: var(--muted); }
+    .status { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 4px; background: #16a34a22; color: #4ade80; border: 1px solid #16a34a44; margin-top: 0.4rem; }
+    .status.loading { background: #b4530022; color: #fb923c; border-color: #b4530044; }
+
+    /* Query cards */
+    .queries { display: flex; flex-direction: column; gap: 1.2rem; margin-top: 2rem; }
+    .query-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .query-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.2rem; cursor: pointer; user-select: none; transition: background 0.15s; }
+    .query-header:hover { background: #222; }
+    .query-title { font-size: 0.9rem; font-weight: 600; color: #fff; }
+    .query-num { font-size: 0.7rem; font-weight: 700; color: var(--accent); background: var(--accent-light); border: 1px solid #e10a0a44; border-radius: 4px; padding: 0.15rem 0.45rem; margin-right: 0.6rem; }
+    .chevron { font-size: 0.75rem; color: var(--muted); transition: transform 0.2s; }
+    .query-card.open .chevron { transform: rotate(180deg); }
+    .query-body { display: none; border-top: 1px solid var(--border); }
+    .query-card.open .query-body { display: block; }
+    .sql-block { background: #111; padding: 1rem 1.2rem; font-family: 'Courier New', monospace; font-size: 0.78rem; color: #9cdcfe; line-height: 1.6; white-space: pre-wrap; }
+    .run-btn { margin: 0.75rem 1.2rem; display: inline-flex; align-items: center; gap: 0.4rem; background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 0.4rem 0.9rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+    .run-btn:hover { background: #c00; }
+    .run-btn:disabled { background: #444; cursor: not-allowed; }
+    .result-area { margin: 0 1.2rem 1rem; }
+    .result-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .result-table th { background: #222; color: var(--accent); text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .result-table td { padding: 0.45rem 0.75rem; border-bottom: 1px solid #1e1e1e; color: var(--text); }
+    .result-table tr:last-child td { border-bottom: none; }
+    .result-table tr:hover td { background: #1e1e1e; }
+    .empty { color: var(--muted); font-size: 0.8rem; padding: 0.75rem 0; }
+    .error { color: #f87171; font-size: 0.8rem; padding: 0.75rem 0; }
+
+    /* Custom SQL */
+    .custom-section { margin-top: 2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .custom-section h2 { font-size: 0.9rem; font-weight: 600; padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); }
+    textarea { width: 100%; background: #111; color: #9cdcfe; border: none; padding: 1rem 1.2rem; font-family: 'Courier New', monospace; font-size: 0.8rem; line-height: 1.6; resize: vertical; min-height: 100px; outline: none; }
+    .custom-actions { padding: 0.75rem 1.2rem; display: flex; gap: 0.5rem; align-items: center; border-top: 1px solid var(--border); }
+    .schema-hint { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+
+    /* Schema panel */
+    .schema-section { margin-top: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.2rem; }
+    .schema-section h2 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .schema-tables { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .schema-pill { font-size: 0.75rem; background: #111; border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.6rem; color: #ccc; }
+    .schema-pill span { color: var(--muted); font-size: 0.68rem; margin-left: 0.3rem; }
+
+    footer { margin-top: 3rem; text-align: center; font-size: 0.75rem; color: #333; }
+    footer a { color: #444; text-decoration: none; }
+    footer a:hover { color: #888; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">
+      <span class="logo-icon">🚂</span>
+      <div>
+        <h1>Virgin Train DB Explorer</h1>
+        <p class="subtitle">Interactive SQL database running entirely in your browser</p>
+      </div>
+    </div>
+    <span class="status loading" id="status">Loading database…</span>
+  </header>
+
+  <div class="schema-section">
+    <h2>Schema</h2>
+    <div class="schema-tables">
+      <div class="schema-pill">Stations <span>StationID, StationName, Location</span></div>
+      <div class="schema-pill">Trains <span>TrainID, TrainName, TrainType, Capacity</span></div>
+      <div class="schema-pill">Services <span>ServiceID, TrainID, DepartureStationID, ArrivalStationID, DepartureTime, ArrivalTime, FrequencyPerDay</span></div>
+      <div class="schema-pill">Customers <span>CustomerID, FirstName, LastName, Email, PaymentType</span></div>
+      <div class="schema-pill">Tickets <span>TicketID, ServiceID, CustomerID, TicketLevel, Cost, CurrencyCode</span></div>
+    </div>
+  </div>
+
+  <div class="queries" id="queries"></div>
+
+  <div class="custom-section">
+    <h2>Custom Query</h2>
+    <textarea id="customSQL" placeholder="SELECT * FROM Stations;"></textarea>
+    <div class="custom-actions">
+      <button class="run-btn" id="runCustom" disabled>▶ Run</button>
+      <span class="schema-hint">Tables: Stations · Trains · Services · Customers · Tickets</span>
+    </div>
+    <div class="result-area" id="customResult"></div>
+  </div>
+
+  <footer>
+    <a href="https://github.com/eddie7ch/OlderSchoolProjects/tree/main/Virgin_Train_DB_Project" target="_blank">View source on GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="../index.html">← All projects</a>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.min.js"></script>
+<script>
+const QUERIES = [
+  {
+    title: 'All ticket costs — London Euston to Manchester Piccadilly',
+    sql: `SELECT dep.StationName AS Departure, arr.StationName AS Arrival,
+       tkt.TicketLevel,
+       '£' || ROUND(tkt.Cost, 2) AS CostGBP
+FROM Tickets tkt
+JOIN Services s ON tkt.ServiceID = s.ServiceID
+JOIN Stations dep ON s.DepartureStationID = dep.StationID
+JOIN Stations arr ON s.ArrivalStationID = arr.StationID
+WHERE dep.StationName='London Euston' AND arr.StationName='Manchester Piccadilly';`,
+  },
+  {
+    title: 'Cheapest ticket per London-origin route',
+    sql: `SELECT arr.StationName AS Destination,
+       '£' || MIN(tkt.Cost) AS CheapestCost
+FROM Tickets tkt
+JOIN Services s ON tkt.ServiceID = s.ServiceID
+JOIN Stations dep ON s.DepartureStationID = dep.StationID
+JOIN Stations arr ON s.ArrivalStationID = arr.StationID
+WHERE dep.StationName='London Euston'
+GROUP BY arr.StationName;`,
+  },
+  {
+    title: 'Daily seat capacity per route',
+    sql: `SELECT arr.StationName AS Destination,
+       tr.TrainType, tr.Capacity, s.FrequencyPerDay,
+       (tr.Capacity * s.FrequencyPerDay) AS DailySeatCapacity
+FROM Services s
+JOIN Trains tr ON s.TrainID = tr.TrainID
+JOIN Stations arr ON s.ArrivalStationID = arr.StationID
+JOIN Stations dep ON s.DepartureStationID = dep.StationID
+WHERE dep.StationName='London Euston';`,
+  },
+  {
+    title: 'Fastest journey time per route (minutes)',
+    sql: `SELECT arr.StationName AS Destination,
+       MIN((strftime('%s', s.ArrivalTime) - strftime('%s', s.DepartureTime)) / 60) AS FastestMinutes
+FROM Services s
+JOIN Stations dep ON s.DepartureStationID = dep.StationID
+JOIN Stations arr ON s.ArrivalStationID = arr.StationID
+WHERE dep.StationName='London Euston'
+GROUP BY arr.StationName;`,
+  },
+  {
+    title: 'Average cost by ticket level per route',
+    sql: `SELECT arr.StationName AS Destination,
+       tkt.TicketLevel,
+       '£' || ROUND(AVG(tkt.Cost), 2) AS AvgCost
+FROM Tickets tkt
+JOIN Services s ON tkt.ServiceID = s.ServiceID
+JOIN Stations dep ON s.DepartureStationID = dep.StationID
+JOIN Stations arr ON s.ArrivalStationID = arr.StationID
+WHERE dep.StationName='London Euston'
+GROUP BY arr.StationName, tkt.TicketLevel;`,
+  },
+];
+
+const SETUP_SQL = `
+CREATE TABLE Stations (StationID INTEGER PRIMARY KEY AUTOINCREMENT, StationName TEXT NOT NULL, Location TEXT NOT NULL);
+CREATE TABLE Trains (TrainID INTEGER PRIMARY KEY AUTOINCREMENT, TrainName TEXT NOT NULL, TrainType TEXT NOT NULL, Capacity INTEGER NOT NULL);
+CREATE TABLE Services (ServiceID INTEGER PRIMARY KEY AUTOINCREMENT, TrainID INTEGER NOT NULL, DepartureStationID INTEGER NOT NULL, ArrivalStationID INTEGER NOT NULL, DepartureTime TEXT NOT NULL, ArrivalTime TEXT NOT NULL, FrequencyPerDay INTEGER,
+  FOREIGN KEY (TrainID) REFERENCES Trains(TrainID),
+  FOREIGN KEY (DepartureStationID) REFERENCES Stations(StationID),
+  FOREIGN KEY (ArrivalStationID) REFERENCES Stations(StationID));
+CREATE TABLE Customers (CustomerID INTEGER PRIMARY KEY AUTOINCREMENT, FirstName TEXT NOT NULL, LastName TEXT NOT NULL, Email TEXT NOT NULL, PaymentType TEXT NOT NULL);
+CREATE TABLE Tickets (TicketID INTEGER PRIMARY KEY AUTOINCREMENT, ServiceID INTEGER NOT NULL, CustomerID INTEGER NOT NULL, TicketLevel TEXT NOT NULL CHECK (TicketLevel IN ('Standard','First Class')), Cost REAL NOT NULL, CurrencyCode TEXT NOT NULL DEFAULT 'GBP',
+  FOREIGN KEY (ServiceID) REFERENCES Services(ServiceID),
+  FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID));
+
+INSERT INTO Stations (StationName, Location) VALUES
+  ('London Euston','London'),('Manchester Piccadilly','Manchester'),
+  ('Birmingham New Street','Birmingham'),('Glasgow Central','Glasgow'),
+  ('Liverpool Lime Street','Liverpool');
+INSERT INTO Trains (TrainName, TrainType, Capacity) VALUES ('Pendolino','Pendolino',500),('Voyager','Voyager',250);
+INSERT INTO Services (TrainID,DepartureStationID,ArrivalStationID,DepartureTime,ArrivalTime,FrequencyPerDay) VALUES
+  (1,1,2,'2025-10-29 08:00','2025-10-29 10:07',46),
+  (1,1,4,'2025-10-29 09:00','2025-10-29 13:09',13),
+  (1,1,5,'2025-10-29 07:30','2025-10-29 09:38',16),
+  (1,1,3,'2025-10-29 06:30','2025-10-29 07:52',49);
+INSERT INTO Customers (FirstName,LastName,Email,PaymentType) VALUES ('Test','CustomerA','custA@test.com','N/A'),('Test','CustomerB','custB@test.com','N/A');
+INSERT INTO Tickets (ServiceID,CustomerID,TicketLevel,Cost,CurrencyCode) VALUES
+  (1,1,'Standard',45.00,'GBP'),(1,2,'First Class',120.00,'GBP'),
+  (2,1,'Standard',80.00,'GBP'),(3,2,'Standard',50.00,'GBP'),
+  (4,1,'First Class',150.00,'GBP');
+`;
+
+let db = null;
+
+function renderTable(results) {
+  if (!results || results.length === 0) return '<p class="empty">No results.</p>';
+  const { columns, values } = results[0];
+  let html = '<table class="result-table"><thead><tr>';
+  columns.forEach(c => html += `<th>${c}</th>`);
+  html += '</tr></thead><tbody>';
+  values.forEach(row => {
+    html += '<tr>';
+    row.forEach(v => html += `<td>${v ?? 'NULL'}</td>`);
+    html += '</tr>';
+  });
+  return html + '</tbody></table>';
+}
+
+function runQuery(sql, resultEl) {
+  try {
+    const results = db.exec(sql);
+    resultEl.innerHTML = renderTable(results);
+  } catch (e) {
+    resultEl.innerHTML = `<p class="error">Error: ${e.message}</p>`;
+  }
+}
+
+// Build query cards
+const queriesEl = document.getElementById('queries');
+QUERIES.forEach((q, i) => {
+  const card = document.createElement('div');
+  card.className = 'query-card';
+  card.innerHTML = `
+    <div class="query-header">
+      <span><span class="query-num">Q${i+1}</span><span class="query-title">${q.title}</span></span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="query-body">
+      <pre class="sql-block">${q.sql}</pre>
+      <button class="run-btn" disabled>▶ Run</button>
+      <div class="result-area"></div>
+    </div>`;
+  card.querySelector('.query-header').addEventListener('click', () => card.classList.toggle('open'));
+  card.querySelector('.run-btn').addEventListener('click', () => {
+    runQuery(q.sql, card.querySelector('.result-area'));
+  });
+  queriesEl.appendChild(card);
+});
+
+// Init sql.js
+initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` }).then(SQL => {
+  db = new SQL.Database();
+  db.run(SETUP_SQL);
+  document.getElementById('status').textContent = '✓ Database ready';
+  document.getElementById('status').classList.remove('loading');
+  document.querySelectorAll('.run-btn').forEach(b => b.disabled = false);
+}).catch(e => {
+  document.getElementById('status').textContent = 'Failed to load database';
+});
+
+document.getElementById('runCustom').addEventListener('click', () => {
+  const sql = document.getElementById('customSQL').value.trim();
+  if (sql) runQuery(sql, document.getElementById('customResult'));
+});
+</script>
+</body>
+</html>
