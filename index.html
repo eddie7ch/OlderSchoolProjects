@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eddie's School Projects</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #e5e5e5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.4rem;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 3rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      width: 100%;
+      max-width: 640px;
+    }
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .card:hover { border-color: #555; background: #222; }
+    .card .icon { font-size: 1.6rem; margin-bottom: 0.4rem; }
+    .card .name { font-size: 0.95rem; font-weight: 600; color: #fff; }
+    .card .desc { font-size: 0.78rem; color: #666; line-height: 1.5; }
+    .card .badge {
+      margin-top: 0.6rem;
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      background: #16a34a22;
+      color: #4ade80;
+      border: 1px solid #16a34a44;
+      width: fit-content;
+    }
+    .card.unavailable { opacity: 0.4; pointer-events: none; }
+    .card.unavailable .badge {
+      background: #44444422;
+      color: #888;
+      border-color: #44444444;
+    }
+    footer {
+      margin-top: 3rem;
+      font-size: 0.75rem;
+      color: #444;
+    }
+    footer a { color: #555; text-decoration: none; }
+    footer a:hover { color: #888; }
+  </style>
+</head>
+<body>
+  <h1>Eddie's School Projects</h1>
+  <p class="subtitle">A collection of projects built during school.</p>
+
+  <div class="grid">
+    <a class="card" href="./Retail-Management-System/index.html">
+      <div class="icon">🛒</div>
+      <div class="name">Retail Management System</div>
+      <div class="desc">Inventory and retail management app built with HTML, Bootstrap, and vanilla JS.</div>
+      <span class="badge">Live</span>
+    </a>
+
+    <a class="card" href="./web-adventure-game/index.html">
+      <div class="icon">🎮</div>
+      <div class="name">Scriptoria</div>
+      <div class="desc">A browser-based text adventure game with an atmospheric terminal-style interface.</div>
+      <span class="badge">Live</span>
+    </a>
+
+    <div class="card unavailable">
+      <div class="icon">📄</div>
+      <div class="name">Textual Data Processing</div>
+      <div class="desc">C# console application for processing and analysing textual data.</div>
+      <span class="badge">Desktop only</span>
+    </div>
+
+    <div class="card unavailable">
+      <div class="icon">🚂</div>
+      <div class="name">Virgin Train DB</div>
+      <div class="desc">SQL database design and queries for a train booking system.</div>
+      <span class="badge">SQL only</span>
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://github.com/eddie7ch/OlderSchoolProjects" target="_blank">View on GitHub</a>
+  </footer>
+</body>
+</html>
